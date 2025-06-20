@@ -81,6 +81,11 @@ export default function MainScreen() {
           placeholder="Pesquise..."
           value={query}
           onChangeText={setQuery}
+          style={{
+            backgroundColor: lightTheme.colors.elevation.level5,
+            borderWidth: 0.3,
+            borderColor: lightTheme.colors.inverseSurface
+          }}
         />
       </View>
       <View style={{ marginVertical: 5}}>

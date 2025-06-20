@@ -8,6 +8,7 @@ import { lightTheme } from "../constants/theme";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddObra({ visible, toClose }) {
   const [formData, setFormData] = useState({
@@ -198,7 +199,9 @@ export default function AddObra({ visible, toClose }) {
   };
 
   useEffect(() => {
-    obterLocalizacaoAtual();
+    if (visible) {
+      obterLocalizacaoAtual();
+    }
   }, [visible]);
 
   return (
@@ -208,9 +211,14 @@ export default function AddObra({ visible, toClose }) {
         padding: 20,
         backgroundColor: lightTheme.colors.background,
       }}
+      contentContainerStyle={{ paddingBottom: 40 }}
     >
-      <Button icon="backspace-outline" />
-      <Text variant="titleLarge">Adicionar Nova Obra:</Text>
+      <View
+        style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+      >
+        <IconButton onPress={() => toClose(false)} icon="backspace-outline" size={30} />
+        <Text variant="titleLarge">Adicionar Nova Obra:</Text>
+      </View>
       <TextInput
         label="Nome da Obra"
         value={formData.nome}
@@ -244,7 +252,7 @@ export default function AddObra({ visible, toClose }) {
       </View>
 
       <Text style={{ marginTop: 20, marginBottom: 4 }}>Data de Início:</Text>
-      <Button onPress={() => setShowDateInicio(true)} icon="calendar">
+      <Button mode="outlined" onPress={() => setShowDateInicio(true)} icon="calendar">
         {formData.dataInicio.toLocaleDateString("pt-BR")}
       </Button>
       {showDateInicio && (
@@ -257,7 +265,7 @@ export default function AddObra({ visible, toClose }) {
       )}
 
       <Text style={{ marginTop: 20, marginBottom: 4 }}>Data de Término:</Text>
-      <Button onPress={() => setShowDateFim(true)} icon="calendar">
+      <Button mode="outlined" onPress={() => setShowDateFim(true)} icon="calendar">
         {formData.dataFim.toLocaleDateString("pt-BR")}
       </Button>
       {showDateFim && (
@@ -278,7 +286,7 @@ export default function AddObra({ visible, toClose }) {
       />
 
       <Button
-        style={{ height: "8%", justifyContent: "center" }}
+        style={{ height: "6%", justifyContent: "center" }}
         mode="elevated"
         icon="camera"
         buttonColor={lightTheme.colors.elevation.level2}
@@ -308,6 +316,7 @@ export default function AddObra({ visible, toClose }) {
         >
           Cancelar
         </Button>
+        <View style={{ width: 15 }} />
         <Button
           onPress={() => salvarObra(formData)}
           style={{ flex: 1 }}

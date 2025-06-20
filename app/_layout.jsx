@@ -7,12 +7,12 @@ import { customNeutralTheme, darkTheme, lightTheme } from "../constants/theme";
 export default function Layout() {
   const theme = useColorScheme();
   return (
-    <PaperProvider theme={lightTheme}>
-      <SafeAreaProvider>
+    <SafeAreaProvider>
+      <PaperProvider theme={lightTheme}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
         </Stack>
-      </SafeAreaProvider>
-    </PaperProvider>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
