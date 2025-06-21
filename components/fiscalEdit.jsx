@@ -1,26 +1,22 @@
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
 import { Alert, Image, Modal, ScrollView, View } from "react-native";
-import { Button, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
+import {
+  Button,
+  IconButton,
+  Snackbar,
+  Text,
+  TextInput,
+} from "react-native-paper";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
-import "react-native-get-random-values";
-import { v4 as uuidv4 } from "uuid";
-import { lightTheme } from "../constants/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { lightTheme } from "../constants/theme";
 
-export default function AddFiscalModal({ obraID, visible, toClose }) {
-  const [formData, setFormData] = useState({
-    id: "",
-    data: new Date(),
-    status: "Em Dia",
-    observacoes: "",
-    localizacao: {},
-    imagem: {},
-    idObra: obraID,
-  });
-  const [enderecoCompleto, setEnderecoCompleto] = useState("");
-  const [imagemUri, setImagemUri] = useState(null);
+export default function EditFiscalModal({ visible, toClose, fiscalizacao }) {
+  const [formData, setFormData] = useState(fiscalizacao);
+  const [enderecoCompleto, setEnderecoCompleto] = useState(fiscalizacao.localizacao?.endereco || "");
+  const [imagemUri, setImagemUri] = useState(fiscalizacao.imagem?.uri || "");
   const [localLoading, setLocalLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
@@ -91,10 +87,7 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
   const tirarFoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permissão Negada",
-        "Permissão para usar a câmera é necessária."
-      );
+      Alert.alert("Permissão Negada", "Permissão para usar a câmera é necessária.");
       return;
     }
 
@@ -111,60 +104,31 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
     }
   };
 
-  const salvarFiscalizacao = async (formData) => {
+  const salvarEdicao = async () => {
     try {
-      // 🔒 Validação de campos obrigatórios
-      const { data, status, observacoes, localizacao, imagem, idObra } =
-        formData;
+      const { data, status, observacoes, localizacao, imagem, id } = formData;
 
-      if (
-        !status ||
-        !observacoes ||
-        !data ||
-        !imagem ||
-        !localizacao?.endereco
-      ) {
-        return Alert.alert(
-          "Campos obrigatórios",
-          "Por favor, preencha todos os campos obrigatórios."
-        );
+      if (!status || !observacoes || !data || !imagem?.uri || !localizacao?.endereco) {
+        return Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
       }
 
-      // 🆔 Geração de ID único
-      const novoFiscal = {
-        id: uuidv4(10),
-        status: status,
-        observacoes: observacoes || "",
-        data: data.toISOString(),
-        localizacao: localizacao,
-        imagem: imagem,
-        idObra,
-      };
+      const listaSalva = await AsyncStorage.getItem("fiscalizacoes");
+      const lista = listaSalva ? JSON.parse(listaSalva) : [];
 
-      // 📥 Recuperar obras anteriores
-      const fiscalSalvos = await AsyncStorage.getItem("fiscalizacoes");
-      const lista = fiscalSalvos ? JSON.parse(fiscalSalvos) : [];
+      const novaLista = lista.map((item) =>
+        item.id === id ? { ...formData, imagem, localizacao } : item
+      );
 
-      // ➕ Adicionar nova obra
-      const novaLista = [...lista, novoFiscal];
-
-      // 💾 Salvar no AsyncStorage
       await AsyncStorage.setItem("fiscalizacoes", JSON.stringify(novaLista));
 
-      Alert.alert("Sucesso", "Fiscalizacao salva com sucesso!");
-      toClose(false);
+      setSnackbarText("Fiscalização atualizada com sucesso!");
+      setSnackbarVisible(true);
+      setTimeout(() => toClose(false), 1000);
     } catch (error) {
-      console.error("Erro ao salvar obra:", error);
-      Alert.alert("Erro", "Não foi possível salvar a obra.");
-      return false;
+      console.error("Erro ao salvar:", error);
+      Alert.alert("Erro", "Não foi possível atualizar a fiscalização.");
     }
   };
-
-  useEffect(() => {
-    if (visible) {
-      obterLocalizacaoAtual();
-    }
-  }, [visible]);
 
   return (
     <Modal visible={visible} onRequestClose={() => toClose(false)}>
@@ -176,34 +140,23 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
         }}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <View
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
           <IconButton
             onPress={() => toClose(false)}
             icon="backspace-outline"
             size={30}
           />
-          <Text variant="titleLarge">Nova Fiscalizacao:</Text>
+          <Text variant="titleLarge">Editar Fiscalização</Text>
         </View>
+
         <Text style={{ marginBottom: 4 }}>Endereço:</Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TextInput
-            value={enderecoCompleto}
-            style={{ flex: 1 }}
-            disabled={true}
-          />
+          <TextInput value={enderecoCompleto} disabled style={{ flex: 1 }} />
           <IconButton
-            mode="contained"
             onPress={obterLocalizacaoAtual}
-            style={{ marginLeft: 10 }}
             loading={localLoading}
             icon="map-marker"
-            size={30}
+            style={{ marginLeft: 10 }}
             iconColor={lightTheme.colors.onSurface}
           />
         </View>
@@ -212,14 +165,14 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
           Data de Fiscalização:
         </Text>
         <Button mode="outlined" icon="calendar">
-          {formData.data.toLocaleDateString("pt-BR")}
+          {new Date(formData.data).toLocaleDateString("pt-BR")}
         </Button>
+
+        <Text style={{ marginTop: 20, marginBottom: 4 }}>Status:</Text>
         <Picker
           selectedValue={formData.status}
           onValueChange={(item) => updateField("status", item)}
           style={{
-            marginTop: 20,
-            marginBottom: 4,
             backgroundColor: lightTheme.colors.elevation.level2,
           }}
         >
@@ -237,16 +190,15 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
         />
 
         <Button
-          style={{ height: "10%", justifyContent: "center" }}
-          mode="elevated"
           icon="camera"
-          buttonColor={lightTheme.colors.elevation.level2}
+          mode="elevated"
           onPress={tirarFoto}
+          buttonColor={lightTheme.colors.elevation.level2}
         >
-          Tirar Foto da Obra
+          Tirar Nova Foto
         </Button>
 
-        {imagemUri && (
+        {imagemUri ? (
           <Image
             source={{ uri: imagemUri }}
             style={{
@@ -257,8 +209,9 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
             }}
             resizeMode="cover"
           />
-        )}
-        <View style={{ flex: 1, flexDirection: "row", marginVertical: 30 }}>
+        ) : null}
+
+        <View style={{ flexDirection: "row", marginVertical: 30 }}>
           <Button
             onPress={() => toClose(false)}
             style={{ flex: 1 }}
@@ -269,7 +222,7 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
           </Button>
           <View style={{ width: 15 }} />
           <Button
-            onPress={() => salvarFiscalizacao(formData)}
+            onPress={salvarEdicao}
             style={{ flex: 1 }}
             mode="contained"
             icon="content-save"
@@ -277,14 +230,12 @@ export default function AddFiscalModal({ obraID, visible, toClose }) {
             Salvar
           </Button>
         </View>
+
         <Snackbar
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
           duration={3000}
-          action={{
-            label: "OK",
-            onPress: () => setSnackbarVisible(false),
-          }}
+          action={{ label: "OK", onPress: () => setSnackbarVisible(false) }}
         >
           {snackbarText}
         </Snackbar>

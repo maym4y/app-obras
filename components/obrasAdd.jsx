@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Alert, View, Image, ScrollView } from "react-native";
-import { Button, IconButton, Text, TextInput } from "react-native-paper";
+import {
+  Button,
+  IconButton,
+  Snackbar,
+  Text,
+  TextInput,
+} from "react-native-paper";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -27,6 +33,8 @@ export default function AddObra({ visible, toClose }) {
   const [showDateFim, setShowDateFim] = useState(false);
   const [imagemUri, setImagemUri] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarText, setSnackbarText] = useState("");
 
   const updateField = (field, value) => {
     setFormData((prev) => ({
@@ -85,7 +93,8 @@ export default function AddObra({ visible, toClose }) {
         };
         updateField("local", localizacaoAtual);
 
-        Alert.alert("Localização Capturada", enderecoFormatado);
+        setSnackbarText(`Localização Capturada: ${enderecoFormatado}`);
+        setSnackbarVisible(true);
       }
     } catch (error) {
       console.error("Erro de localização:", error);
@@ -216,7 +225,11 @@ export default function AddObra({ visible, toClose }) {
       <View
         style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
       >
-        <IconButton onPress={() => toClose(false)} icon="backspace-outline" size={30} />
+        <IconButton
+          onPress={() => toClose(false)}
+          icon="backspace-outline"
+          size={30}
+        />
         <Text variant="titleLarge">Adicionar Nova Obra:</Text>
       </View>
       <TextInput
@@ -252,7 +265,11 @@ export default function AddObra({ visible, toClose }) {
       </View>
 
       <Text style={{ marginTop: 20, marginBottom: 4 }}>Data de Início:</Text>
-      <Button mode="outlined" onPress={() => setShowDateInicio(true)} icon="calendar">
+      <Button
+        mode="outlined"
+        onPress={() => setShowDateInicio(true)}
+        icon="calendar"
+      >
         {formData.dataInicio.toLocaleDateString("pt-BR")}
       </Button>
       {showDateInicio && (
@@ -265,7 +282,11 @@ export default function AddObra({ visible, toClose }) {
       )}
 
       <Text style={{ marginTop: 20, marginBottom: 4 }}>Data de Término:</Text>
-      <Button mode="outlined" onPress={() => setShowDateFim(true)} icon="calendar">
+      <Button
+        mode="outlined"
+        onPress={() => setShowDateFim(true)}
+        icon="calendar"
+      >
         {formData.dataFim.toLocaleDateString("pt-BR")}
       </Button>
       {showDateFim && (
@@ -326,6 +347,17 @@ export default function AddObra({ visible, toClose }) {
           Salvar
         </Button>
       </View>
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: "OK",
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+        {snackbarText}
+      </Snackbar>
     </ScrollView>
   );
 }

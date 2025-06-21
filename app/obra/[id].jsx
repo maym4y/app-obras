@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -77,7 +77,7 @@ const FiscalizacaoTab = ({ fiscal }) => {
             minWidth: 80,
             height: 32,
             justifyContent: "center",
-            alignContent: 'center',
+            alignContent: "center",
           }}
           textStyle={{
             color: "#f2f2f2",
@@ -196,6 +196,50 @@ export default function ObraDetalhes() {
     },
   ];
 
+  const deletarObra = async (idObra) => {
+    Alert.alert(
+      "Excluir Obra",
+      "Deletar esta obra também excluirá todas as fiscalizações associadas a ela. Deseja continuar?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              // 🔸 Excluir Obra
+              const obrasData = await AsyncStorage.getItem("obras");
+              const obras = obrasData ? JSON.parse(obrasData) : [];
+              const novasObras = obras.filter((obra) => obra.id !== idObra);
+              await AsyncStorage.setItem("obras", JSON.stringify(novasObras));
+
+              // 🔸 Excluir Fiscalizações da Obra
+              const fiscData = await AsyncStorage.getItem("fiscalizacoes");
+              const fisc = fiscData ? JSON.parse(fiscData) : [];
+              const novasFisc = fisc.filter((f) => f.idObra !== idObra);
+              await AsyncStorage.setItem(
+                "fiscalizacoes",
+                JSON.stringify(novasFisc)
+              );
+
+              Alert.alert(
+                "Sucesso",
+                "Obra e fiscalizações deletadas com sucesso."
+              );
+              router.replace("/"); // Você pode usar isso para atualizar a UI ou redirecionar
+            } catch (error) {
+              console.error("Erro ao deletar obra:", error);
+              Alert.alert("Erro", "Não foi possível excluir a obra.");
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     getObra();
   }, [id]);
@@ -252,6 +296,7 @@ export default function ObraDetalhes() {
               icon={() => <Icon source="trash-can" size={24} />}
               style={{ marginHorizontal: 10 }}
               mode="contained-tonal"
+              onPress={() => deletarObra(id)}
             >
               Deletar
             </Button>
