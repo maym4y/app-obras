@@ -21,6 +21,7 @@ import { lightTheme } from "../../constants/theme";
 import FiscalCard from "../../components/fiscalCard";
 import AddFiscalModal from "../../components/fiscalAdd";
 import { SafeAreaView } from "react-native-safe-area-context";
+import EditObra from "../../components/obraEdit";
 
 const formatarData = (dataString) => {
   if (!dataString) return "N/A";
@@ -53,9 +54,18 @@ const ObraTab = ({ obra }) => {
   );
 };
 
-const FiscalizacaoTab = ({ fiscal }) => {
+const FiscalizacaoTab = ({ fiscal, setAddFiscal }) => {
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      <Button
+        mode="contained"
+        onPress={() => setAddFiscal(true)}
+        icon={() => (
+          <Icon source="plus" size={28} color={lightTheme.colors.onPrimary} />
+        )}
+      >
+        Fiscalização
+      </Button>
       <View
         style={{
           flexDirection: "row",
@@ -152,6 +162,7 @@ export default function ObraDetalhes() {
   const [fiscal, setFiscal] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addFiscal, setAddFiscal] = useState(false);
+  const [editObra, setEditObra] = useState(false);
   const { id } = useLocalSearchParams();
 
   const getObra = async () => {
@@ -301,19 +312,15 @@ export default function ObraDetalhes() {
               Deletar
             </Button>
             <Button
+              icon={() => <Icon source="text-box-edit" size={24} />}
+              style={{ marginHorizontal: 10 }}
               mode="contained"
-              onPress={() => setAddFiscal(true)}
-              icon={() => (
-                <Icon
-                  source="plus"
-                  size={28}
-                  color={lightTheme.colors.onPrimary}
-                />
-              )}
+              onPress={() => setEditObra(true)}
             >
-              Fiscalização
+              Editar
             </Button>
           </View>
+          <EditObra visible={editObra} toClose={setEditObra} obra={obra} />
         </View>
         <Swiper
           data={info}
