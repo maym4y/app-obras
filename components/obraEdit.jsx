@@ -19,7 +19,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { lightTheme } from "../constants/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function EditObra({ visible, toClose, obra }) {
+export default function EditObra({ visible, toClose, obra, onSuccess }) {
   const [formData, setFormData] = useState(obra);
   const [enderecoCompleto, setEnderecoCompleto] = useState(obra.local?.endereco || "");
   const [showDateInicio, setShowDateInicio] = useState(false);
@@ -110,14 +110,15 @@ export default function EditObra({ visible, toClose, obra }) {
 
       const novaLista = lista.map((item) => (item.id === obra.id ? {
         ...formData,
-        dataInicio: formData.dataInicio.toISOString(),
-        dataFim: formData.dataFim.toISOString(),
+        dataInicio: new Date(formData.dataInicio).toISOString(),
+        dataFim: new Date(formData.dataFim).toISOString(),
       } : item));
 
       await AsyncStorage.setItem("obras", JSON.stringify(novaLista));
       setSnackbarText("Obra atualizada com sucesso!");
       setSnackbarVisible(true);
       toClose(false);
+      onSuccess();
     } catch (error) {
       console.error("Erro ao atualizar obra:", error);
       Alert.alert("Erro", "Não foi possível atualizar a obra.");

@@ -1,20 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { Alert, Image, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
   Chip,
   Icon,
+  IconButton,
+  Modal,
+  Portal,
+  Snackbar,
   Text,
+  TextInput,
 } from "react-native-paper";
 import Swiper from "react-native-screens-swiper";
 import { lightTheme } from "../../constants/theme";
@@ -22,6 +21,45 @@ import FiscalCard from "../../components/fiscalCard";
 import AddFiscalModal from "../../components/fiscalAdd";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EditObra from "../../components/obraEdit";
+import axios from "axios";
+
+async function enviarEmailObra(obra) {
+  if (!obra.destinatario || !obra.destinatario.includes("@")) {
+    Alert.alert("E-mail inválido", "Por favor, insira um e-mail válido.");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("nome", obra.nome);
+  form.append("responsavel", obra.responsavel);
+  form.append("local", obra.local?.endereco || "");
+  form.append("descricao", obra.descricao || "");
+  form.append("dataInicio", obra.dataInicio);
+  form.append("previsaoConclusao", obra.dataFim);
+  form.append("destinatario", obra.destinatario);
+
+  if (obra.imagem?.uri) {
+    form.append("imagem", {
+      uri: obra.imagem.uri,
+      name: obra.imagem.name || "imagem.jpg",
+      type: obra.imagem.type || "image/jpeg",
+    });
+  }
+
+  try {
+    await axios.post(`http://192.168.15.149:3001/enviar-email-obra`, form, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Erro ao enviar e-mail:",
+      error.response?.data || error.message
+    );
+    Alert.alert("Erro", "Falha ao enviar o e-mail.");
+  }
+}
 
 const formatarData = (dataString) => {
   if (!dataString) return "N/A";
@@ -58,6 +96,7 @@ const FiscalizacaoTab = ({ fiscal, setAddFiscal }) => {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <Button
+        style={{ marginHorizontal: 10, marginBottom: 5 }}
         mode="contained"
         onPress={() => setAddFiscal(true)}
         icon={() => (
@@ -72,6 +111,7 @@ const FiscalizacaoTab = ({ fiscal, setAddFiscal }) => {
           flexWrap: "nowrap",
           justifyContent: "space-between",
           paddingHorizontal: 10,
+          paddingVertical: 5,
           gap: 6, // espaçamento entre chips
         }}
       >
@@ -163,6 +203,12 @@ export default function ObraDetalhes() {
   const [loading, setLoading] = useState(true);
   const [addFiscal, setAddFiscal] = useState(false);
   const [editObra, setEditObra] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [emailParaEnvio, setEmailParaEnvio] = useState("");
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarText, setSnackbarText] = useState("");
+
   const { id } = useLocalSearchParams();
 
   const getObra = async () => {
@@ -261,6 +307,13 @@ export default function ObraDetalhes() {
     }
   }, [addFiscal]);
 
+  useFocusEffect(
+    useCallback(() => {
+      getObra();
+      getFiscalizacoes();
+    }, [])
+  );
+
   if (loading) {
     return (
       <>
@@ -305,22 +358,89 @@ export default function ObraDetalhes() {
           <View style={{ display: "flex", flexDirection: "row" }}>
             <Button
               icon={() => <Icon source="trash-can" size={24} />}
-              style={{ marginHorizontal: 10 }}
+              style={{ paddingVertical: 3, marginRight: 5 }}
               mode="contained-tonal"
               onPress={() => deletarObra(id)}
             >
               Deletar
             </Button>
             <Button
-              icon={() => <Icon source="text-box-edit" size={24} />}
-              style={{ marginHorizontal: 10 }}
+              icon={() => <Icon source="pencil" size={24} color="#f2f2f2" />}
+              style={{ paddingVertical: 3, marginRight: 5 }}
               mode="contained"
               onPress={() => setEditObra(true)}
             >
               Editar
             </Button>
+            <IconButton
+              onPress={() => setEmailModalVisible(true)}
+              style={{
+                flex: 1,
+                paddingVertical: 5,
+                borderWidth: 2,
+                backgroundColor: lightTheme.colors.elevation.level3,
+              }}
+              mode="outlined"
+              icon={() => <Icon source="email-fast" size={26} />}
+            />
           </View>
-          <EditObra visible={editObra} toClose={setEditObra} obra={obra} />
+          <EditObra
+            visible={editObra}
+            toClose={setEditObra}
+            obra={obra}
+            onSuccess={() => router.replace(`/obra/${id}`)}
+          />
+          <Portal>
+            <Modal
+              visible={emailModalVisible}
+              onDismiss={() => setEmailModalVisible(false)}
+              contentContainerStyle={{
+                backgroundColor: "white",
+                padding: 20,
+                margin: 20,
+                borderRadius: 10,
+              }}
+            >
+              <Text variant="titleMedium" style={{ marginBottom: 10 }}>
+                Enviar por E-mail
+              </Text>
+
+              <TextInput
+                label="E-mail do destinatário"
+                value={emailParaEnvio}
+                onChangeText={setEmailParaEnvio}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={{ marginBottom: 20 }}
+              />
+
+              <Button
+                mode="contained"
+                loading={emailLoading}
+                disabled={emailLoading}
+                onPress={async () => {
+                  setEmailLoading(true);
+                  try {
+                    await enviarEmailObra({
+                      ...obra,
+                      destinatario: emailParaEnvio,
+                    });
+                    setSnackbarText("Obra enviada com sucesso!");
+                    setEmailModalVisible(false);
+                  } catch (err) {
+                    console.error(err);
+                    setSnackbarText("Erro ao enviar a obra.");
+                  } finally {
+                    setEmailLoading(false);
+                    setSnackbarVisible(true);
+                    setEmailParaEnvio("");
+                  }
+                }}
+              >
+                Enviar
+              </Button>
+            </Modal>
+          </Portal>
         </View>
         <Swiper
           data={info}
@@ -355,6 +475,17 @@ export default function ObraDetalhes() {
             },
           }}
         />
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          action={{
+            label: "OK",
+            onPress: () => setSnackbarVisible(false),
+          }}
+        >
+          {snackbarText}
+        </Snackbar>
       </View>
     </>
   );

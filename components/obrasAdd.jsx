@@ -14,7 +14,6 @@ import { lightTheme } from "../constants/theme";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AddObra({ visible, toClose }) {
   const [formData, setFormData] = useState({
@@ -123,7 +122,7 @@ export default function AddObra({ visible, toClose }) {
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setImagemUri(uri);
-      updateField("imagem", { uri });
+      updateField("imagem", { uri, name: "image", type: "image/jpg" });
     }
   };
 
